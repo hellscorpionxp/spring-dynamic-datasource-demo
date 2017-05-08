@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans
+    xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:context="http://www.springframework.org/schema/context"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd">
+
+    <context:component-scan base-package="com.example" />
+
+    <bean
+        id="dataSourceParent"
+        class="com.alibaba.druid.pool.DruidDataSource"
+        init-method="init"
+        destroy-method="close"
+        abstract="true"
+        p:initialSize="5"
+        p:minIdle="5"
+        p:maxActive="200"
+        p:maxWait="60000"
+        p:timeBetweenEvictionRunsMillis="60000"
+        p:minEvictableIdleTimeMillis="300000"
+        p:validationQuery="SELECT 'x'"
+        p:validationQueryTimeout="1"
+        p:testWhileIdle="true"
+        p:testOnBorrow="false"
+        p:testOnReturn="false"
+        p:keepAlive="false"
+        p:removeAbandoned="false"
+        p:removeAbandonedTimeout="300"
+        p:logAbandoned="true"
+        p:poolPreparedStatements="false"
+        p:maxPoolPreparedStatementPerConnectionSize="-1"
+        p:proxyFilters-ref="proxyFilters"
+        p:useGlobalDataSourceStat="true" />
+    <util:list id="proxyFilters">
+        <bean
+            id="stat-filter"
+            class="com.alibaba.druid.filter.stat.StatFilter"
+            p:slowSqlMillis="10000"
+            p:logSlowSql="true"
+            p:mergeSql="true" />
+        <bean
+            id="wall-filter"
+            class="com.alibaba.druid.wall.WallFilter"
+            p:dbType="mysql"
+            p:logViolation="true"
+            p:throwException="false" />
+        <bean
+            id="log4j2-filter"
+            class="com.alibaba.druid.filter.logging.Log4j2Filter"
+            p:connectionLogErrorEnabled="true"
+            p:statementLogErrorEnabled="true" />
+    </util:list>
+
+    <!-- DynamicDataSource -->
+    <bean
+        id="dataSource"
+        class="com.example.DynamicDataSource">
+        <property name="targetDataSources">
+            <map key-type="com.example.DataSourceType">
+                <entry
+                    key="LASTMINUTE"
+                    value-ref="dataSource1" />
+                <entry
+                    key="TAG"
+                    value-ref="dataSource2" />
+                <entry
+                    key="PLACE"
+                    value-ref="dataSource3" />
+            </map>
+        </property>
+        <property
+            name="defaultTargetDataSource"
+            ref="dataSource1" />
+    </bean>
+    <bean
+        id="transactionManager"
+        class="org.springframework.jdbc.datasource.DataSourceTransactionManager"
+        p:dataSource-ref="dataSource" />
+    <tx:annotation-driven />
+    <bean
+        id="sqlSessionFactory"
+        class="org.mybatis.spring.SqlSessionFactoryBean"
+        p:dataSource-ref="dataSource"
+        p:configLocation="classpath:mybatis-config.xml"
+        p:typeAliasesPackage="com.example"
+        p:mapperLocations="classpath*:com/example/*.xml" />
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property
+            name="sqlSessionFactoryBeanName"
+            value="sqlSessionFactory" />
+        <property
+            name="basePackage"
+            value="com.example" />
+    </bean>
+
+</beans>
